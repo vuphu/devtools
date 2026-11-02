@@ -1,0 +1,13 @@
+[workspace]
+resolver = "2"
+members = [
+    "apps/*",
+    "packages/*",
+    "extensions/*",
+]
+
+[profile.release]
+opt-level = "s"
+lto = true
+strip = true
+codegen-units = 1

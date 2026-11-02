@@ -1,0 +1,6 @@
+package devtools:extension@0.1.0;
+
+world extension {
+    export manifest: func() -> string;
+    export on-event: func(event: string) -> string;
+}

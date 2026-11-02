@@ -1,0 +1,11 @@
+[package]
+name = "timestamp"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+devtools-extension-sdk = { package = "extension-sdk", path = "../../packages/extension-sdk" }
+chrono = { version = "0.4", default-features = false, features = ["alloc"] }

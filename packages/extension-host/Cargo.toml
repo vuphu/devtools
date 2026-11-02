@@ -1,0 +1,16 @@
+[package]
+name = "extension-host"
+version = "0.1.0"
+edition = "2024"
+description = "WebAssembly extension runtime and ~/.devtools manager for devtools"
+
+[lib]
+name = "devtools_extension_host"
+
+[dependencies]
+devtools-core = { package = "core", path = "../core" }
+wasmtime = { version = "50.0.1", default-features = false, features = ["anyhow", "cranelift", "runtime", "std", "component-model", "component-model-async"] }
+wasmtime-wasi = { version = "50.0.1", default-features = false, features = ["p3"] }
+tokio = { version = "1", features = ["rt", "time", "net"] }
+serde_json = "1.0"
+anyhow = "1.0"

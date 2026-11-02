@@ -1,0 +1,11 @@
+[package]
+name = "devtools"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+devtools-core = { package = "core", path = "../../packages/core" }
+devtools-extension-host = { package = "extension-host", path = "../../packages/extension-host" }
+ratatui = "0.30.2"
+crossterm = "0.29.0"
+anyhow = "1.0"
