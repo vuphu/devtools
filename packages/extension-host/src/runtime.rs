@@ -2,7 +2,7 @@ use anyhow::{Context, Result, ensure};
 use devtools_core::{CURRENT_ABI_VERSION, ExtensionEvent, ExtensionResponse, Manifest};
 use tokio::runtime::{Builder, Runtime};
 use wasmtime::component::{Component, Linker, ResourceTable, TypedFunc};
-use wasmtime::{Config, Engine, Store};
+use wasmtime::{Engine, Store};
 use wasmtime_wasi::{WasiCtx, WasiCtxBuilder, WasiCtxView, WasiView};
 
 struct State {
@@ -27,22 +27,12 @@ pub struct ExtensionInstance {
 }
 
 impl ExtensionInstance {
-    pub fn load_from_bytes(bytes: &[u8]) -> Result<Self> {
-        let mut config = Config::new();
-        config
-            .wasm_component_model_async(true)
-            .wasm_component_model_async_stackful(true)
-            .concurrency_support(true);
-        let engine = Engine::new(&config)?;
-        let component = Component::new(&engine, bytes)
-            .map_err(anyhow::Error::from)
-            .context("Invalid WASI component")?;
-
-        let mut linker = Linker::new(&engine);
+    pub fn load_from_component(engine: &Engine, component: &Component) -> Result<Self> {
+        let mut linker = Linker::new(engine);
         wasmtime_wasi::p3::add_to_linker(&mut linker)?;
 
         let mut store = Store::new(
-            &engine,
+            engine,
             State {
                 wasi: WasiCtxBuilder::new().build(),
                 table: ResourceTable::new(),
@@ -50,7 +40,7 @@ impl ExtensionInstance {
         );
 
         let runtime = Builder::new_current_thread().enable_all().build()?;
-        let instance = runtime.block_on(linker.instantiate_async(&mut store, &component))?;
+        let instance = runtime.block_on(linker.instantiate_async(&mut store, component))?;
         let manifest_fn = instance.get_typed_func::<(), (String,)>(&mut store, "manifest")?;
         let (json,) = runtime.block_on(manifest_fn.call_async(&mut store, ()))?;
         let manifest: Manifest =

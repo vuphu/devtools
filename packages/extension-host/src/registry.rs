@@ -1,22 +1,41 @@
 use crate::ExtensionInstance;
 use anyhow::{Context, Result, bail};
-use devtools_core::get_extensions_dir;
-use std::{fs, path::PathBuf};
+use std::{
+    collections::HashMap,
+    fs,
+    path::PathBuf,
+    sync::{Arc, Mutex},
+};
+use wasmtime::component::Component;
+use wasmtime::{Config, Engine};
+
+struct CachedComponent {
+    bytes: Vec<u8>,
+    component: Component,
+}
 
 #[derive(Clone)]
 pub struct ExtensionRegistry {
     dir: PathBuf,
-}
-
-impl Default for ExtensionRegistry {
-    fn default() -> Self {
-        Self::create(get_extensions_dir())
-    }
+    engine: Engine,
+    components: Arc<Mutex<HashMap<String, CachedComponent>>>,
 }
 
 impl ExtensionRegistry {
-    pub fn create(dir: PathBuf) -> Self {
-        Self { dir }
+    pub fn create(dir: PathBuf) -> Result<Self> {
+        let mut config = Config::new();
+        config
+            .wasm_component_model_async(true)
+            .wasm_component_model_async_stackful(true)
+            .concurrency_support(true);
+        let engine = Engine::new(&config)
+            .map_err(anyhow::Error::from)
+            .context("Failed to create extension engine")?;
+        Ok(Self {
+            dir,
+            engine,
+            components: Default::default(),
+        })
     }
 
     pub fn get_extensions(&self) -> Vec<String> {
@@ -44,6 +63,27 @@ impl ExtensionRegistry {
         }
         let bytes = fs::read(&path)
             .with_context(|| format!("Failed to read extension file: {}", path.display()))?;
-        ExtensionInstance::load_from_bytes(&bytes)
+        let component = {
+            let mut components = self
+                .components
+                .lock()
+                .map_err(|_| anyhow::anyhow!("Extension component cache lock poisoned"))?;
+            if let Some(cached) = components.get(name).filter(|cached| cached.bytes == bytes) {
+                cached.component.clone()
+            } else {
+                let component = Component::new(&self.engine, &bytes)
+                    .map_err(anyhow::Error::from)
+                    .context("Invalid WASI component")?;
+                components.insert(
+                    name.to_string(),
+                    CachedComponent {
+                        bytes,
+                        component: component.clone(),
+                    },
+                );
+                component
+            }
+        };
+        ExtensionInstance::load_from_component(&self.engine, &component)
     }
 }

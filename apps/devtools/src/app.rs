@@ -35,7 +35,7 @@ pub struct App {
 impl App {
     pub fn create() -> Result<Self> {
         ensure_devtools_dirs()?;
-        let registry = ExtensionRegistry::default();
+        let registry = ExtensionRegistry::create(devtools_core::get_extensions_dir())?;
         let installed = registry.get_extensions();
         Ok(Self {
             mode: ActiveMode::Shell,
