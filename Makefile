@@ -1,4 +1,4 @@
-.PHONY: all build build-ext run hot-reload clean
+.PHONY: all build build-ext run hot-reload fmt fmt-check clean
 
 all: build build-ext
 
@@ -16,6 +16,12 @@ run: build build-ext
 hot-reload:
 	@test -x .tools/bin/cargo-watch || cargo install cargo-watch --locked --root .tools
 	@.tools/bin/cargo-watch watch -w apps -w packages -w extensions -s 'cargo run -p devtools'
+
+fmt:
+	cargo fmt --all
+
+fmt-check:
+	cargo fmt --all -- --check
 
 clean:
 	cargo clean
