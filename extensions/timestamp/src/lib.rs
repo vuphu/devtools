@@ -8,7 +8,7 @@ pub struct TimestampExtension {
 }
 
 impl Extension for TimestampExtension {
-    fn manifest(&self) -> Manifest {
+    fn get_manifest(&self) -> Manifest {
         Manifest {
             name: "timestamp".into(),
             version: "0.1.0".into(),
@@ -17,7 +17,7 @@ impl Extension for TimestampExtension {
         }
     }
 
-    fn on_event(&mut self, event: ExtensionEvent) -> ExtensionResponse {
+    fn handle_event(&mut self, event: ExtensionEvent) -> ExtensionResponse {
         let tick = matches!(event, ExtensionEvent::Tick);
         let text = match event {
             ExtensionEvent::Init { args } => args,
@@ -61,7 +61,7 @@ impl Extension for TimestampExtension {
             })
         };
         ExtensionResponse {
-            view: Some(view(result)),
+            view: Some(build_view(result)),
             message,
             exit: false,
         }
@@ -90,7 +90,7 @@ fn parse(query: &str) -> Result<DateTime<Utc>, String> {
     ))
 }
 
-fn view(result: Result<DateTime<Utc>, String>) -> View {
+fn build_view(result: Result<DateTime<Utc>, String>) -> View {
     let content = match result {
         Ok(date) => Block::KeyValue {
             items: vec![

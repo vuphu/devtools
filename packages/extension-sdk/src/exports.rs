@@ -11,7 +11,7 @@ macro_rules! export_extension {
                 fn manifest() -> String {
                     let mut instance = INSTANCE.lock().unwrap();
                     let extension = instance.get_or_insert_with(Default::default);
-                    let manifest = $crate::Extension::manifest(extension);
+                    let manifest = $crate::Extension::get_manifest(extension);
                     $crate::serde_json::to_string(&manifest).unwrap()
                 }
 
@@ -20,7 +20,7 @@ macro_rules! export_extension {
                         Ok(event) => {
                             let mut instance = INSTANCE.lock().unwrap();
                             let extension = instance.get_or_insert_with(Default::default);
-                            $crate::Extension::on_event(extension, event)
+                            $crate::Extension::handle_event(extension, event)
                         }
                         Err(error) => $crate::ExtensionResponse {
                             message: Some(format!("Invalid event payload: {error}")),

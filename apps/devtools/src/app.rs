@@ -30,7 +30,7 @@ pub struct App {
 }
 
 impl App {
-    pub fn new() -> Result<Self> {
+    pub fn create() -> Result<Self> {
         ensure_devtools_dirs()?;
         let registry = ExtensionRegistry::default();
         let installed = registry.get_extensions();
@@ -52,7 +52,7 @@ impl App {
         self.status_is_error = is_error;
     }
 
-    pub fn on_key(&mut self, key: KeyEvent) {
+    pub fn handle_key(&mut self, key: KeyEvent) {
         if key.kind != KeyEventKind::Press {
             return;
         }
@@ -70,7 +70,7 @@ impl App {
             KeyCode::Up => return self.select_completion(true),
             KeyCode::Down => return self.select_completion(false),
             KeyCode::Esc => return self.handle_escape(),
-            KeyCode::Enter if !self.completions().is_empty() => return self.complete_input(),
+            KeyCode::Enter if !self.get_completions().is_empty() => return self.complete_input(),
             KeyCode::Enter => return self.submit_input(),
             KeyCode::Char(c) => {
                 self.input.insert(self.input_cursor, c);
@@ -95,7 +95,7 @@ impl App {
             KeyCode::End => self.input_cursor = self.input.len(),
             _ => return,
         }
-        self.completion_index = self.completions().len().saturating_sub(1);
+        self.completion_index = self.get_completions().len().saturating_sub(1);
     }
 
     fn move_cursor_left(&mut self) {
@@ -105,7 +105,7 @@ impl App {
             .map_or(0, |(index, _)| index);
     }
 
-    pub fn completions(&self) -> Vec<String> {
+    pub fn get_completions(&self) -> Vec<String> {
         if self.input.is_empty() || self.input_cursor != self.input.len() {
             return Vec::new();
         }
@@ -144,7 +144,7 @@ impl App {
     }
 
     fn select_completion(&mut self, previous: bool) {
-        let count = self.completions().len();
+        let count = self.get_completions().len();
         if count > 0 {
             self.completion_index = if previous {
                 (self.completion_index + count - 1) % count
@@ -155,11 +155,11 @@ impl App {
     }
 
     fn complete_input(&mut self) {
-        let candidates = self.completions();
+        let candidates = self.get_completions();
         if let Some(candidate) = candidates.get(self.completion_index) {
             self.input = candidate.clone();
             self.input_cursor = self.input.len();
-            self.completion_index = self.completions().len().saturating_sub(1);
+            self.completion_index = self.get_completions().len().saturating_sub(1);
         }
     }
 
@@ -178,7 +178,7 @@ impl App {
             return;
         }
         let exit_message = format!("Exited extension '{}'", name);
-        let response = match instance.on_event(&ExtensionEvent::Input {
+        let response = match instance.handle_event(&ExtensionEvent::Input {
             text: text.to_string(),
         }) {
             Ok(response) => response,
@@ -243,7 +243,7 @@ impl App {
         let args = args.to_string();
         let task = std::thread::spawn(move || {
             let mut instance = registry.load_extension(&extension_name)?;
-            let response = instance.on_event(&ExtensionEvent::Init { args })?;
+            let response = instance.handle_event(&ExtensionEvent::Init { args })?;
             Ok((instance, response))
         });
         self.mode = ActiveMode::Loading {
@@ -281,13 +281,13 @@ impl App {
         }
     }
 
-    pub fn on_tick(&mut self) {
+    pub fn handle_tick(&mut self) {
         if let ActiveMode::Extension {
             instance,
             current_view,
             ..
         } = &mut self.mode
-            && let Ok(response) = instance.on_event(&ExtensionEvent::Tick)
+            && let Ok(response) = instance.handle_event(&ExtensionEvent::Tick)
             && let Some(view) = response.view
         {
             *current_view = Some(view);

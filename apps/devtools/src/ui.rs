@@ -9,7 +9,7 @@ use ratatui::{
 };
 
 pub fn render(app: &App, frame: &mut Frame) {
-    let candidates = app.completions();
+    let candidates = app.get_completions();
     let areas = Layout::vertical([
         Constraint::Length(2),
         Constraint::Min(0),

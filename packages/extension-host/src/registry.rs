@@ -1,6 +1,6 @@
 use crate::ExtensionInstance;
 use anyhow::{Context, Result, bail};
-use devtools_core::extensions_dir;
+use devtools_core::get_extensions_dir;
 use std::{fs, path::PathBuf};
 
 #[derive(Clone)]
@@ -10,12 +10,12 @@ pub struct ExtensionRegistry {
 
 impl Default for ExtensionRegistry {
     fn default() -> Self {
-        Self::new(extensions_dir())
+        Self::create(get_extensions_dir())
     }
 }
 
 impl ExtensionRegistry {
-    pub fn new(dir: PathBuf) -> Self {
+    pub fn create(dir: PathBuf) -> Self {
         Self { dir }
     }
 

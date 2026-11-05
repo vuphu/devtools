@@ -72,11 +72,11 @@ impl ExtensionInstance {
         })
     }
 
-    pub fn manifest(&self) -> &Manifest {
+    pub fn get_manifest(&self) -> &Manifest {
         &self.manifest
     }
 
-    pub fn on_event(&mut self, event: &ExtensionEvent) -> Result<ExtensionResponse> {
+    pub fn handle_event(&mut self, event: &ExtensionEvent) -> Result<ExtensionResponse> {
         let json = serde_json::to_string(event)?;
         let (response,) = self
             .runtime
