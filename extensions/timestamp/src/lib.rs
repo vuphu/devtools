@@ -34,7 +34,9 @@ impl Extension for TimestampExtension {
                 text
             }
             ExtensionEvent::Tick if self.live => String::new(),
-            ExtensionEvent::Tick => return ExtensionResponse::default(),
+            ExtensionEvent::Tick | ExtensionEvent::Form { .. } => {
+                return ExtensionResponse::default();
+            }
         };
         let query = text.trim();
         self.live = query.is_empty()

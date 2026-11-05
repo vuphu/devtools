@@ -71,6 +71,40 @@ impl App {
         if matches!(self.mode, ActiveMode::Loading { .. }) && key.code != KeyCode::Esc {
             return;
         }
+        if let ActiveMode::Extension {
+            instance,
+            current_view: Some(view),
+            ..
+        } = &mut self.mode
+            && view
+                .blocks
+                .iter()
+                .any(|block| matches!(block, devtools_core::Block::Form { .. }))
+        {
+            use devtools_core::FormAction;
+            let action = match key.code {
+                KeyCode::Up | KeyCode::BackTab => FormAction::Up,
+                KeyCode::Down | KeyCode::Tab => FormAction::Down,
+                KeyCode::Char(' ') => FormAction::Toggle,
+                KeyCode::Left => FormAction::Decrease,
+                KeyCode::Right => FormAction::Increase,
+                KeyCode::Enter => FormAction::Submit,
+                KeyCode::Esc => FormAction::Cancel,
+                _ => return,
+            };
+            match instance.handle_event(&ExtensionEvent::Form { action }) {
+                Ok(response) => {
+                    if let Some(updated) = response.view {
+                        *view = updated;
+                    }
+                    if let Some(message) = response.message {
+                        self.set_status(message, false);
+                    }
+                }
+                Err(error) => self.set_status(format!("Extension error: {error:#}"), true),
+            }
+            return;
+        }
         match key.code {
             KeyCode::Tab => return self.complete_input(),
             KeyCode::Up => return self.navigate_input(true),
@@ -137,7 +171,7 @@ impl App {
                         if let devtools_core::Block::Help(hints) = block {
                             for (command, _) in hints {
                                 for word in command.split(" / ") {
-                                    if !word.contains(['<', '>', ' ']) {
+                                    if !word.contains(['<', '>']) {
                                         commands.push(word.to_string());
                                     }
                                 }
@@ -148,8 +182,11 @@ impl App {
                 commands
             }
         };
-        candidates
-            .retain(|candidate| candidate.starts_with(&self.input) && candidate != &self.input);
+        candidates.retain(|candidate| {
+            candidate.starts_with(&self.input)
+                && candidate != &self.input
+                && (!candidate.contains(' ') || self.input.contains(' '))
+        });
         candidates.sort();
         candidates.dedup();
         candidates

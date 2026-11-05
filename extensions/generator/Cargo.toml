@@ -1,0 +1,13 @@
+[package]
+name = "generator"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+devtools-extension-sdk = { package = "extension-sdk", path = "../../packages/extension-sdk" }
+anyhow = "1.0"
+getrandom = "0.4.3"
+uuid = { version = "1.29.0", features = ["v4", "v7"] }

@@ -82,7 +82,7 @@ fn render_block<'a>(block: &'a Block, lines: &mut Vec<Line<'a>>) {
             } else {
                 Style::default()
             };
-            lines.push(Line::styled(text, style));
+            lines.extend(text.split('\n').map(|line| Line::styled(line, style)));
         }
         Block::KeyValue { items } => {
             for (key, value) in items {
@@ -93,6 +93,27 @@ fn render_block<'a>(block: &'a Block, lines: &mut Vec<Line<'a>>) {
             lines.push(Line::raw(headers.join("  ")));
             for row in rows {
                 lines.push(Line::raw(row.join("  ")));
+            }
+        }
+        Block::Form { fields, selected } => {
+            for (index, field) in fields.iter().enumerate() {
+                let text = match field {
+                    devtools_core::FormField::Checkbox { label, checked } => {
+                        format!("[{}] {label}", if *checked { "x" } else { " " })
+                    }
+                    devtools_core::FormField::Choice { label, value } => {
+                        format!("{label}: < {value} >")
+                    }
+                    devtools_core::FormField::Number { label, value } => {
+                        format!("{label}: < {value} >")
+                    }
+                };
+                let style = if index == *selected {
+                    Style::default().add_modifier(Modifier::REVERSED)
+                } else {
+                    Style::default()
+                };
+                lines.push(Line::styled(text, style));
             }
         }
         Block::Help(hints) => {

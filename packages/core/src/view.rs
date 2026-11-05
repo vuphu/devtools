@@ -28,6 +28,10 @@ pub enum Block {
         rows: Vec<Vec<String>>,
     },
     Help(Vec<(String, String)>),
+    Form {
+        fields: Vec<FormField>,
+        selected: usize,
+    },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -35,4 +39,11 @@ pub struct View {
     pub title: String,
     pub blocks: Vec<Block>,
     pub input_prompt: Option<String>,
+}
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "type", rename_all = "snake_case")]
+pub enum FormField {
+    Choice { label: String, value: String },
+    Checkbox { label: String, checked: bool },
+    Number { label: String, value: usize },
 }

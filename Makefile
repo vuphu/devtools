@@ -6,9 +6,10 @@ build:
 	cargo build --release -p devtools
 
 build-ext:
-	cargo build --target wasm32-wasip3 --release -p timestamp
+	cargo build --target wasm32-wasip3 --release -p timestamp -p generator
 	mkdir -p "$${DEVTOOLS_HOME:-$$HOME/.devtools}/extensions"
 	cp target/wasm32-wasip3/release/timestamp.wasm "$${DEVTOOLS_HOME:-$$HOME/.devtools}/extensions/timestamp.wasm"
+	cp target/wasm32-wasip3/release/generator.wasm "$${DEVTOOLS_HOME:-$$HOME/.devtools}/extensions/generator.wasm"
 
 run: build build-ext
 	./target/release/devtools
