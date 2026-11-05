@@ -21,6 +21,9 @@ pub struct App {
     pub mode: ActiveMode,
     registry: ExtensionRegistry,
     installed: Vec<String>,
+    history: std::collections::HashMap<String, Vec<String>>,
+    history_index: Option<usize>,
+    history_draft: String,
     pub input: String,
     pub input_cursor: usize,
     pub completion_index: usize,
@@ -38,6 +41,9 @@ impl App {
             mode: ActiveMode::Shell,
             registry,
             installed,
+            history: Default::default(),
+            history_index: None,
+            history_draft: String::new(),
             input: String::new(),
             input_cursor: 0,
             completion_index: 0,
@@ -67,20 +73,23 @@ impl App {
         }
         match key.code {
             KeyCode::Tab => return self.complete_input(),
-            KeyCode::Up => return self.select_completion(true),
-            KeyCode::Down => return self.select_completion(false),
+            KeyCode::Up => return self.navigate_input(true),
+            KeyCode::Down => return self.navigate_input(false),
             KeyCode::Esc => return self.handle_escape(),
             KeyCode::Enter if !self.get_completions().is_empty() => return self.complete_input(),
             KeyCode::Enter => return self.submit_input(),
             KeyCode::Char(c) => {
+                self.history_index = None;
                 self.input.insert(self.input_cursor, c);
                 self.input_cursor += c.len_utf8();
             }
             KeyCode::Backspace if self.input_cursor > 0 => {
+                self.history_index = None;
                 self.move_cursor_left();
                 self.input.remove(self.input_cursor);
             }
             KeyCode::Delete if self.input_cursor < self.input.len() => {
+                self.history_index = None;
                 self.input.remove(self.input_cursor);
             }
             KeyCode::Left => self.move_cursor_left(),
@@ -106,7 +115,10 @@ impl App {
     }
 
     pub fn get_completions(&self) -> Vec<String> {
-        if self.input.is_empty() || self.input_cursor != self.input.len() {
+        if self.history_index.is_some()
+            || self.input.is_empty()
+            || self.input_cursor != self.input.len()
+        {
             return Vec::new();
         }
         let mut candidates = match &self.mode {
@@ -154,6 +166,44 @@ impl App {
         }
     }
 
+    fn get_history_context(&self) -> String {
+        match &self.mode {
+            ActiveMode::Shell => String::new(),
+            ActiveMode::Extension { name, .. } | ActiveMode::Loading { name, .. } => name.clone(),
+        }
+    }
+
+    fn navigate_input(&mut self, previous: bool) {
+        if !self.get_completions().is_empty() {
+            self.select_completion(previous);
+            return;
+        }
+        let context = self.get_history_context();
+        let Some(history) = self
+            .history
+            .get(&context)
+            .filter(|history| !history.is_empty())
+        else {
+            return;
+        };
+        self.history_index = match (previous, self.history_index) {
+            (true, None) => {
+                self.history_draft = self.input.clone();
+                Some(history.len() - 1)
+            }
+            (true, Some(index)) => Some(index.saturating_sub(1)),
+            (false, Some(index)) if index + 1 < history.len() => Some(index + 1),
+            (false, Some(_)) => None,
+            (false, None) => return,
+        };
+        self.input = self.history_index.map_or_else(
+            || self.history_draft.clone(),
+            |index| history[index].clone(),
+        );
+        self.input_cursor = self.input.len();
+        self.completion_index = 0;
+    }
+
     fn complete_input(&mut self) {
         let candidates = self.get_completions();
         if let Some(candidate) = candidates.get(self.completion_index) {
@@ -169,6 +219,15 @@ impl App {
         self.completion_index = 0;
         let text = input.trim();
 
+        self.history_index = None;
+        self.history_draft.clear();
+        if !text.is_empty() {
+            let context = self.get_history_context();
+            let history = self.history.entry(context).or_default();
+            if history.last().is_none_or(|previous| previous != text) {
+                history.push(text.to_string());
+            }
+        }
         let ActiveMode::Extension { name, instance, .. } = &mut self.mode else {
             self.handle_shell_command(text);
             return;
@@ -295,6 +354,8 @@ impl App {
     }
 
     fn handle_escape(&mut self) {
+        self.history_index = None;
+        self.history_draft.clear();
         self.completion_index = 0;
         if let ActiveMode::Extension { name, .. } | ActiveMode::Loading { name, .. } = &self.mode {
             self.set_status(format!("Exited extension '{}'", name), false);

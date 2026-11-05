@@ -51,7 +51,7 @@ fn render_content(app: &App, frame: &mut Frame, area: Rect) {
         }
         ActiveMode::Shell => {
             lines.push(Line::styled(
-                "/help  ·  ↑↓ select  ·  Enter/Tab choose  ·  Ctrl+C quit",
+                "/help  ·  ↑↓ history/select  ·  Enter/Tab choose  ·  Ctrl+C quit",
                 muted,
             ));
         }
